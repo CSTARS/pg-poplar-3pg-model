@@ -13,6 +13,13 @@ var server = app.listen(3000, function(){
 });
 
 
+function daysInMonth(month,year) {
+	if(new Date(year, 2, 0).getDate() == 29 && month == 12){
+		return new Date(year, month, 0).getDate() -1;
+	}
+ 	return new Date(year, month, 0).getDate();
+}
+
 app.get('/search', function(req1, res1){
 	// GET variables lat, lon, start and end years
 	var lat = req1.query.lat;
@@ -29,35 +36,33 @@ app.get('/search', function(req1, res1){
 				output = output.slice(8); // get rid of header
 				var res = [];
 				var ptr = [0,0,0,0,0,0];
-				//TODO: process downloaded data to 3PG input
-				var len = years.split(',').length; //how many years
-				for(idx =0; idx < len; idx ++){
-					var DOY = [365,334,304,273,243,212,181,151,120,90,59,31];
-					var DIM = [31,30,31,30,31,31,30,31,30,31,28,31];
-					var m = DIM.pop();
-					var cur = DOY.pop(); 
-					for(i = 0; i <= 365; i++){ // Manual way to loop over months
-						if(i == cur){
-							ptr[0] /= m;
-							ptr[1] /= m;
-							ptr[2] /= m;
-							ptr[4] /= m;
-							ptr[5] /= m;
-							res.push(ptr);
-							cur = DOY.pop();
-							m = DIM.pop();
-							ptr = [0,0,0,0,0,0];
-							if(i == 365)break;
+				// process downloaded data to 3PG input
+				years = years.split(','); //how many years
+				var len = years.length;
+				for(yr =0; yr < len; yr ++){
+					var cumdays = 0;
+					for(m = 1; m <= 12; m++){
+						var dim = daysInMonth(m, Number(years[yr]));
+						ptr = [0,0,0,0,0,0];
+						for(j = 0; j < dim; j++ ){ // For a given month
+							ptr[0] += Number(output[yr*365 + cumdays + j][7]);
+							ptr[1] += Number(output[yr*365 + cumdays + j][6]);
+							var tdmean = Number(output[yr*365 + cumdays + j][8])/1000;
+							tdmean = (Math.log(tdmean/0.6108)*237.3)/(17.27 - Math.log(tdmean/0.6108));
+							ptr[2] += tdmean;
+							ptr[3] += Number(output[yr*365 + cumdays + j][3]);
+							ptr[4] += Number(output[yr*365 + cumdays + j][4]) * 
+							Number(output[yr*365 +  cumdays + j][2])/1e6;
+							ptr[5] += Number(output[yr*365 + cumdays + j][2])/3600;
 						}
-						//update ptr elements
-						ptr[0] += Number(output[idx*365 + i][7]);
-						ptr[1] += Number(output[idx*365 + i][6]);
-						var tdmean = Number(output[idx*365 + i][8])/1000;
-						tdmean = (Math.log(tdmean/0.6108)*237.3)/(17.27 - Math.log(tdmean/0.6108));
-						ptr[2] += tdmean;
-						ptr[3] += Number(output[idx*365 + i][3]);
-						ptr[4] += Number(output[idx*365 + i][4]) * Number(output[idx*365 + i][2])/1e6;
-						ptr[5] += Number(output[idx*365 + i][2])/3600;
+						// Update after reading one month data
+						cumdays += dim
+						ptr[0] /= dim;
+						ptr[1] /= dim;
+						ptr[2] /= dim;
+						ptr[4] /= dim;
+						ptr[5] /= dim;
+						res.push(ptr);
 					}
 				}
 				console.log(JSON.stringify(res)); // return JSON object
