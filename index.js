@@ -29,6 +29,11 @@ app.get('/search', function(req1, res1){
 	var text;
 	var req = request.get('https://daymet.ornl.gov/data/send/saveData?lat='+ 
 		lat +'&lon='+ lon + '&year=' + years).buffer().end(function(err, res){
+			if(res.status != 200){
+				// Daymet server error
+				return(-1);
+			}
+
 			text = res.text;
 
 			//call back API of parse

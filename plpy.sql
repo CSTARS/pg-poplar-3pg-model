@@ -16,7 +16,12 @@ years = range(st, ed+1)
 years = [str(x) for x in years]
 years = ",".join(years)
 mycalendar = calendar.Calendar() # create new obj
-data = urllib2.urlopen('https://daymet.ornl.gov/data/send/saveData?lat='+ str(lat)+'&lon=' + str(lon) + '&year=' + years)
+try:
+    data = urllib2.urlopen('https://daymet.ornl.gov/data/send/saveData?lat='+ 
+	str(lat)+'&lon=' + str(lon) + '&year=' + years)
+except urllib2.HTTPError as e:
+	return(-1)
+
 cr = csv.reader(data)
 for i in range(8):
 	# Get rid of the header
@@ -26,7 +31,10 @@ for i in range(8):
 for yr in range(st, ed+1):
 	for mn in range(1,13):
 		i = 0.0 # day count
-		cur = mycalendar.itermonthdays(2010, mn)
+		cur = mycalendar.itermonthdays(yr, mn)
+
+		if mn == 12 and calendar.isleap(yr):
+			cur = mycalendar.itermonthdays(yr, 11) # Just get a 30 days month!
 		ptr = [0 for _ in range(6)]
 		for day in cur:
 			if day == 0:
